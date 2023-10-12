@@ -15,10 +15,18 @@
 
 		input {
 			font-size: 22px;
+			background-color: #ffffff20;
+			border: 0;
+			color: #fff;
+			padding: 1rem;
 		}
 
 		button {
 			font-size: 22px;
+			border: 2px solid #26cd7120;
+			background-color: #333;
+			color: chartreuse;
+			padding: 1rem;
 		}
 
 		html,
@@ -40,6 +48,7 @@
 		form {
 			display: flex;
 			flex-direction: row;
+			gap: 1rem;
 			align-items: center;
 			justify-content: center;
 			background-color: #ffffff20;
@@ -50,7 +59,7 @@
 <body>
 	<pre id="log"></pre>
 	<form id="form">
-		<input type="text" id="command" list="commands">
+		<input type="text" id="command" list="commands" placeholder="Slask it here">
 		<datalist id="commands">
 			<option value="help" />
 			<option value="sv_cheats 1" />
@@ -76,7 +85,9 @@
 			<option value="mp_autokick 0" />
 		</datalist>
 		<button type="submit" id="send">Send</button>
-		<button type="button" id="init">Make it awesome</button>
+		<button type="button" id="game">Normal game</button>
+		<button type="button" id="bots">Bots!!</button>
+		<button type="button" id="awesome">Make it awesome</button>
 	</form>
 </body>
 <script>
@@ -86,21 +97,17 @@
 		cmdElm.value = ''
 		e.preventDefault()
 	})
-	document.getElementById("init").addEventListener('click', function (e) {
-		socket.send(`sv_cheats 1; mp_autoteambalance 0; mp_limitteams 0; mp_maxrounds 100; mp_roundtime_defuse 30; sv_infinite_ammo 1; mp_startmoney 1000000; mp_afterroundmoney 1000000; 
-game_mode 0; game_type 0; mp_friendlyfire false; sv_banid_enabled false;
-bot_quota_mode normal; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct;
-		bot_kick;
-		bot_add_t; bot_add_t; bot_add_t;
-		bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct;
-		bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t;
-mp_solid_teammates 0;
-sv_hegrenade_damage_multiplier 4.0; sv_hegrenade_radius_multiplier 2.0;
-ragdoll_gravity_scale 0.1; mp_autokick 0;`)
-		e.preventDefault()
+	document.getElementById("game").addEventListener('click', function (e) {
+		socket.send(`sv_cheats 1; mp_autoteambalance 0; mp_limitteams 0; mp_maxrounds 100; mp_roundtime_defuse 30; sv_infinite_ammo 1; mp_startmoney 1000000; mp_afterroundmoney 1000000; game_mode 0; game_type 0; mp_friendlyfire false; sv_banid_enabled false;`)
+	})
+	document.getElementById("bots").addEventListener('click', function (e) {
+		socket.send(`bot_quota_mode normal; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_kick; bot_add_t; bot_add_t; bot_add_t; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t;`)
+	})
+	document.getElementById("awesome").addEventListener('click', function (e) {
+		socket.send(`mp_solid_teammates 0; sv_hegrenade_damage_multiplier 4.0; sv_hegrenade_radius_multiplier 2.0; ragdoll_gravity_scale 0.1; mp_autokick 0;`)
 	})
 
-	const socket = new WebSocket(`wss://${location.host}/ws`)
+	const socket = new WebSocket(`${location.protocol.replace("http", "ws")}//${location.host}/ws`)
 	socket.addEventListener('open', function () {
 		console.log('connected')
 	})
