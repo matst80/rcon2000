@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "author": "",
   "license": "ISC",
@@ -13,5 +14,8 @@
     "express": "^4.18.2",
     "express-ws": "^5.0.2",
     "rcon": "^1.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }
