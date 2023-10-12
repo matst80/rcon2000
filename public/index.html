@@ -99,13 +99,13 @@ sv_hegrenade_damage_multiplier 4.0; sv_hegrenade_radius_multiplier 2.0;
 ragdoll_gravity_scale 0.1; mp_autokick 0;`)
 		e.preventDefault()
 	})
-	console.log(location)
-	const socket = new WebSocket(`ws://${location.host}/ws`)
+
+	const socket = new WebSocket(`wss://${location.host}/ws`)
 	socket.addEventListener('open', function () {
 		console.log('connected')
 	})
 	socket.onmessage = function (event) {
-		console.log('Message from server ', event)
+
 		document.getElementById('log').innerHTML += event.data + '\n'
 	};
 </script>
