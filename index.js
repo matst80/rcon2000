@@ -18,8 +18,8 @@ const password = getEnv("RCON_PASSWORD");
 const rcon_port = process.env.RCON_PORT ? Number(process.env.RCON_PORT) : 27015;
 
 client = new Rcon(host, rcon_port, password, {
-  tcp: true, // false for UDP, true for TCP (default true)
-  challenge: false, // true to use the challenge protocol (default true)
+  tcp: true,
+  challenge: false,
 })
   .on("auth", () => {
     console.log("Authed!");
@@ -50,6 +50,7 @@ const addSocketListener = (ws) => {
   });
   ws.on("message", (msg) => {
     client.send(msg);
+    sendToAll(msg);
   });
 };
 
