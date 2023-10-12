@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>rcon 2000</title>
+	<style>
+		pre {
+			flex: 1;
+			font: 'Fira Code', monospace;
+			font-size: 22px;
+			padding: 3rem;
+		}
+
+		input {
+			font-size: 22px;
+		}
+
+		button {
+			font-size: 22px;
+		}
+
+		html,
+		body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			overscroll-behavior: none;
+		}
+
+		body {
+			display: flex;
+			flex-direction: column;
+			background-color: #000;
+			color: #f3f3f3;
+
+		}
+
+		form {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			justify-content: center;
+			background-color: #ffffff20;
+		}
+	</style>
+</head>
+
+<body>
+	<pre id="log"></pre>
+	<form id="form">
+		<input type="text" id="command" list="commands">
+		<datalist id="commands">
+			<option value="help" />
+			<option value="sv_cheats 1" />
+			<option value="mp_autoteambalance 0" />
+			<option value="mp_limitteams 0" />
+			<option value="mp_maxrounds 100" />
+			<option value="mp_roundtime_defuse 30" />
+			<option value="sv_infinite_ammo 1" />
+			<option value="mp_startmoney 1000000" />
+			<option value="mp_afterroundmoney 1000000" />
+			<option value="game_mode 0" />
+			<option value="game_type 0" />
+			<option value="mp_friendlyfire false" />
+			<option value="sv_banid_enabled false" />
+			<option value="bot_quota_mode normal" />
+			<option value="bot_Add_ct" />
+			<option value="bot_kick" />
+			<option value="bot_add_t" />
+			<option value="mp_solid_teammates 0" />
+			<option value="sv_hegrenade_damage_multiplier 4.0" />
+			<option value="sv_hegrenade_radius_multiplier 2.0" />
+			<option value="ragdoll_gravity_scale 0.1" />
+			<option value="mp_autokick 0" />
+		</datalist>
+		<button type="submit" id="send">Send</button>
+		<button type="button" id="init">Make it awesome</button>
+	</form>
+</body>
+<script>
+	document.getElementById("form").addEventListener('submit', function (e) {
+		const cmdElm = document.getElementById('command')
+		socket.send(cmdElm.value)
+		cmdElm.value = ''
+		e.preventDefault()
+	})
+	document.getElementById("init").addEventListener('click', function (e) {
+		socket.send(`sv_cheats 1; mp_autoteambalance 0; mp_limitteams 0; mp_maxrounds 100; mp_roundtime_defuse 30; sv_infinite_ammo 1; mp_startmoney 1000000; mp_afterroundmoney 1000000; 
+game_mode 0; game_type 0; mp_friendlyfire false; sv_banid_enabled false;
+bot_quota_mode normal; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct;
+		bot_kick;
+		bot_add_t; bot_add_t; bot_add_t;
+		bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct;
+		bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t;
+mp_solid_teammates 0;
+sv_hegrenade_damage_multiplier 4.0; sv_hegrenade_radius_multiplier 2.0;
+ragdoll_gravity_scale 0.1; mp_autokick 0;`)
+		e.preventDefault()
+	})
+	console.log(location)
+	const socket = new WebSocket(`ws://${location.host}/ws`)
+	socket.addEventListener('open', function () {
+		console.log('connected')
+	})
+	socket.onmessage = function (event) {
+		console.log('Message from server ', event)
+		document.getElementById('log').innerHTML += event.data + '\n'
+	};
+</script>
+
+</html>
