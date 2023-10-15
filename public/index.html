@@ -1,286 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>rcon 2000</title>
-    <style>
-      :root {
-        --color: #26cd71;
-        --size: 1rem;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>rcon 2000</title>
+  <style>
+    :root {
+      --color: #26cd71;
+      --size: 1rem;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    pre {
+      flex: 1;
+      font: "Fira Code", monospace;
+      font-size: var(--size);
+      padding: 1.5rem;
+      width: 100vw;
+    }
+
+    code {
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    input {
+      font-size: var(--size);
+      background-color: #ffffff20;
+      border: 0;
+      width: 100%;
+      color: #fff;
+      padding: 1rem;
+    }
+
+    button {
+      font-size: var(--size);
+      border: 2px solid var(--color);
+      background-color: #333;
+      width: 100%;
+      color: var(--color);
+      padding: 1rem;
+    }
+
+    button em {
+      font-style: normal;
+    }
+
+    html,
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      overscroll-behavior: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      background-color: #000;
+      color: #f3f3f3;
+    }
+
+    label {
+      font: "Fira Code", monospace;
+      font-size: var(--size);
+      word-break: break-all;
+      overflow: hidden;
+      padding: 1rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1rem;
+      align-items: center;
+      justify-content: center;
+      background-color: #ffffff20;
+    }
+
+    .row {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 1rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @media (min-width: 950px) {
+      form {
+        flex-direction: column;
       }
 
-      pre {
-        flex: 1;
-        font: "Fira Code", monospace;
-        font-size: var(--size);
-        word-break: break-all;
-        white-space: pre-wrap;
-        overflow: hidden;
-        padding: 3rem;
-        width: 100vw;
+      .row {
+        flex-direction: row;
       }
 
       input {
-        font-size: var(--size);
-        background-color: #ffffff20;
-        border: 0;
-        width: 90%;
-        color: #fff;
-        padding: 1rem;
+        width: 200px;
+        flex: 1;
       }
 
       button {
-        font-size: var(--size);
-        border: 2px solid var(--color);
-        background-color: #333;
-        width: 100%;
-        color: var(--color);
-        padding: 1rem;
+        width: auto;
       }
 
       button em {
         font-style: normal;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
       }
+    }
+  </style>
+</head>
 
-      html,
-      body {
-        height: 100vh;
-        margin: 0;
-        padding: 0;
-        overscroll-behavior: none;
-      }
+<body>
+  <pre><code id="log"></code></pre>
+  <form id="form">
 
-      body {
-        display: flex;
-        flex-direction: column;
-        background-color: #000;
-        color: #f3f3f3;
-      }
+    <div class="row">
+      <input type="text" id="command" tabindex="0" list="commands" placeholder="Slask it here" />
+      <datalist id="commands">
+        <option value="help" />
+        <option value="sv_cheats 1" />
+        <option value="mp_autoteambalance 0" />
+        <option value="mp_limitteams 0" />
+        <option value="mp_maxrounds 100" />
+        <option value="mp_roundtime_defuse 30" />
+        <option value="sv_infinite_ammo 1" />
+        <option value="mp_startmoney 1000000" />
+        <option value="mp_afterroundmoney 1000000" />
+        <option value="game_mode 0" />
+        <option value="game_type 0" />
+        <option value="mp_friendlyfire false" />
+        <option value="sv_banid_enabled false" />
+        <option value="bot_quota_mode normal" />
+        <option value="bot_Add_ct" />
+        <option value="bot_kick" />
+        <option value="bot_add_t" />
+        <option value="mp_solid_teammates 0" />
+        <option value="sv_hegrenade_damage_multiplier 4.0" />
+        <option value="sv_hegrenade_radius_multiplier 2.0" />
+        <option value="ragdoll_gravity_scale 0.1" />
+        <option value="mp_autokick 0" />
+      </datalist>
+      <button type="submit" id="send">Send</button>
+    </div>
+    <div class="row">
+      <label>Game options</label>
 
-      label {
-        font: "Fira Code", monospace;
-        font-size: var(--size);
-        word-break: break-all;
-        overflow: hidden;
-        padding: 1rem;
-      }
+      <button data-cmd="
+    		  	game_mode 0;
+    			game_type 0;
+    			sv_cheats 1;
+    			sv_infinite_ammo 1;
+    			sv_banid_enabled false;
+    			mp_friendlyfire false;
+    			mp_autokick 0;
+    			mp_startmoney 1000000;
+    			mp_afterroundmoney 1000000;
+    			mp_autoteambalance 0;
+    			mp_limitteams 0;
+    			mp_roundtime_defuse 30;
+    			mp_maxrounds 100;
+    			mp_solid_teammates 0;
+    		  ">
+        <em>🤠</em> Gibb game
+      </button>
 
-      form {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        padding: 1rem;
-        align-items: center;
-        justify-content: center;
-        background-color: #ffffff20;
-      }
+      <button data-cmd="
+    			sv_hegrenade_damage_multiplier 4.0;
+    			sv_hegrenade_radius_multiplier 2.0;
+    		  ">
+        <em> 🔥 </em>
+        Powerful grenades
+      </button>
 
-      .row {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        gap: 1rem;
-        align-items: center;
-        justify-content: center;
-      }
+      <button data-cmd="
+    			ragdoll_gravity_scale 0.1;
+    		  ">
+        <em>🪰</em>
+        Floating ragdolls
+      </button>
+    </div>
+    <div class="row">
+      <label>Bots</label>
 
-      @media (min-width: 950px) {
-        form {
-          flex-direction: column;
-        }
+      <button data-cmd="
+    		  bot_quota_mode normal;
+    		  ">
+        <em>✅</em> Enable
+      </button>
 
-        .row {
-          flex-direction: row;
-        }
+      <button data-cmd="bot_kick;"><em>❌</em> Kick all</button>
 
-        input {
-          width: 200px;
-          flex: 1;
-        }
+      <button
+        data-cmd="bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; ">
+        <em>🚓</em>
+        Add CT
+      </button>
 
-        button {
-          width: auto;
-        }
+      <button
+        data-cmd="bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; ">
+        <em>🔫</em>
+        Add T
+      </button>
+    </div>
+  </form>
+</body>
+<script>
+  (function (doc, w) {
+    const byId = (id) => doc.getElementById(id)
 
-        button em {
-          font-style: normal;
-          font-size: 2rem;
-          margin-bottom: 0.5rem;
-          display: block;
-        }
-      }
-    </style>
-  </head>
+    const addEvent = (id, fn, evt = "click") =>
+      byId(id).addEventListener(evt, fn)
 
-  <body>
-    <pre id="log" class="p-4 bg-black text-white"></pre>
-    <form id="form" class="flex flex-col lg:flex-row">
-      <div class="row">
-        <label>Game options</label>
+    addEvent(
+      "form",
+      function (e) {
+        const cmdElm = byId("command")
+        socket.send(cmdElm.value)
+        cmdElm.value = ""
+        e.preventDefault()
+      },
+      "submit"
+    )
 
-        <button
-          data-cmd="
-		  	game_mode 0;
-			game_type 0;
-			sv_cheats 1;
-			sv_infinite_ammo 1;
-			sv_banid_enabled false;
-			mp_friendlyfire false;
-			mp_autokick 0;
-			mp_startmoney 1000000;
-			mp_afterroundmoney 1000000;
-			mp_autoteambalance 0;
-			mp_limitteams 0;
-			mp_roundtime_defuse 30;
-			mp_maxrounds 100;
-			mp_solid_teammates 0;
-		  "
-        >
-          <em>🤠</em> Gibb game
-        </button>
+    for (const butt of doc.querySelectorAll("button[data-cmd]")) {
+      butt.addEventListener("click", (e) => {
+        const cmd = butt.dataset.cmd
+          .trim()
+          .split(/[\n\r\t]+/g)
+          .join(" ")
+        socket.send(cmd)
+      })
+    }
 
-        <button
-          data-cmd="
-			sv_hegrenade_damage_multiplier 4.0;
-			sv_hegrenade_radius_multiplier 2.0;
-		  "
-        >
-          <em> 🔥 </em>
-          Powerful grenades
-        </button>
+    const socket = new WebSocket(
+      `${location.protocol.replace("http", "ws")}//${location.host}/ws`
+    )
 
-        <button
-          data-cmd="
-			ragdoll_gravity_scale 0.1;
-		  "
-        >
-          <em>🪰</em>
-          Floating ragdolls
-        </button>
-      </div>
-      <div class="row">
-        <label>Bots</label>
+    socket.addEventListener("open", () => {
+      console.log("connected")
+    })
 
-        <button
-          data-cmd="
-		  bot_quota_mode normal;
-		  "
-        >
-          <em>✅</em> Enable
-        </button>
+    function htmlEncode(input) {
+      return input
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+    }
 
-        <button data-cmd="bot_kick;"><em>❌</em> Kick all</button>
+    socket.onmessage = (event) => {
+      byId("log").innerHTML += htmlEncode(event.data) + "\n"
+    }
+  })(document, window);
+</script>
 
-        <button
-          data-cmd="bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; "
-        >
-          <em>🚓</em>
-          Add CT
-        </button>
-
-        <button
-          data-cmd="bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; "
-        >
-          <em>🔫</em>
-          Add T
-        </button>
-      </div>
-      <div class="row">
-        <input
-          type="text"
-          id="command"
-          list="commands"
-          placeholder="Slask it here"
-        />
-        <datalist id="commands">
-          <option value="help" />
-          <option value="sv_cheats 1" />
-          <option value="mp_autoteambalance 0" />
-          <option value="mp_limitteams 0" />
-          <option value="mp_maxrounds 100" />
-          <option value="mp_roundtime_defuse 30" />
-          <option value="sv_infinite_ammo 1" />
-          <option value="mp_startmoney 1000000" />
-          <option value="mp_afterroundmoney 1000000" />
-          <option value="game_mode 0" />
-          <option value="game_type 0" />
-          <option value="mp_friendlyfire false" />
-          <option value="sv_banid_enabled false" />
-          <option value="bot_quota_mode normal" />
-          <option value="bot_Add_ct" />
-          <option value="bot_kick" />
-          <option value="bot_add_t" />
-          <option value="mp_solid_teammates 0" />
-          <option value="sv_hegrenade_damage_multiplier 4.0" />
-          <option value="sv_hegrenade_radius_multiplier 2.0" />
-          <option value="ragdoll_gravity_scale 0.1" />
-          <option value="mp_autokick 0" />
-        </datalist>
-        <button type="submit" id="send">Send</button>
-        <button
-          type="button"
-          id="game"
-          data-cmd="sv_cheats 1; mp_autoteambalance 0; mp_limitteams 0; mp_maxrounds 100; mp_roundtime_defuse 30; sv_infinite_ammo 1; mp_startmoney 1000000; mp_afterroundmoney 1000000; game_mode 0; game_type 0; mp_friendlyfire false; sv_banid_enabled false;"
-        >
-          Normal game
-        </button>
-        <button
-          type="button"
-          id="bots"
-          data-cmd="bot_quota_mode normal; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_kick; bot_add_t; bot_add_t; bot_add_t; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_Add_ct; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t;"
-        >
-          Bots!!
-        </button>
-        <button
-          type="button"
-          id="awesome"
-          data-cmd="mp_solid_teammates 0; sv_hegrenade_damage_multiplier 4.0; sv_hegrenade_radius_multiplier 2.0; ragdoll_gravity_scale 0.1; mp_autokick 0;"
-        >
-          Make it awesome
-        </button>
-      </div>
-    </form>
-  </body>
-  <script>
-    (function (doc, w) {
-      const byId = (id) => doc.getElementById(id);
-
-      const addEvent = (id, fn, evt = "click") =>
-        byId(id).addEventListener(evt, fn);
-
-      addEvent(
-        "form",
-        function (e) {
-          const cmdElm = byId("command");
-          socket.send(cmdElm.value);
-          cmdElm.value = "";
-          e.preventDefault();
-        },
-        "submit"
-      );
-
-      for (const butt of doc.querySelectorAll("button[data-cmd]")) {
-        butt.addEventListener("click", (e) => {
-          const cmd = butt.dataset.cmd
-            .trim()
-            .split(/[\n\r\t]+/g)
-            .join(" ");
-          socket.send(cmd);
-        });
-      }
-
-      const socket = new WebSocket(
-        `${location.protocol.replace("http", "ws")}//${location.host}/ws`
-      );
-
-      socket.addEventListener("open", () => {
-        console.log("connected");
-      });
-
-      socket.onmessage = (event) => {
-        byId("log").innerHTML += event.data + "\n";
-      };
-    })(document, window);
-  </script>
 </html>

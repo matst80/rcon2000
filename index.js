@@ -34,11 +34,16 @@ client = new Rcon(host, rcon_port, password, {
   })
   .on("error", (err) => {
     console.log("Socket error: " + err);
+    process.exit(1);
   });
 
 const sendToAll = (msg) => {
   logListeners.forEach((ws) => {
-    ws.send(msg);
+    try {
+      ws.send(msg);
+    } catch (e) {
+      console.error(e);
+    }
   });
 };
 
