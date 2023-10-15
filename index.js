@@ -27,7 +27,7 @@ client = new Rcon(host, rcon_port, password, {
   })
   .on("response", (str) => {
     console.log("Got response: " + str);
-    sendToAll(str);
+    sendToAll(str?.length > 0 ? str : "Empty response");
   })
   .on("end", () => {
     console.log("Socket closed!");
