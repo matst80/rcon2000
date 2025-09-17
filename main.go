@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/gorcon/rcon"
 	"github.com/gorilla/websocket"
@@ -70,22 +69,22 @@ func main() {
 
 	log.Println("Authed with RCON server!")
 
-	// Read from RCON and broadcast to websockets
-	go func() {
-		for {
-			response, err := rconClient.Execute("help") // Sending a command to keep connection alive and get updates
-			if err != nil {
-				log.Printf("Error reading from RCON: %v", err)
-				// Reconnect logic could be added here
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			if len(response) > 0 {
-				broadcast <- response
-			}
-			time.Sleep(10 * time.Second) // Poll for updates
-		}
-	}()
+	// // Read from RCON and broadcast to websockets
+	// go func() {
+	// 	for {
+	// 		response, err := rconClient.Execute("help") // Sending a command to keep connection alive and get updates
+	// 		if err != nil {
+	// 			log.Printf("Error reading from RCON: %v", err)
+	// 			// Reconnect logic could be added here
+	// 			time.Sleep(5 * time.Second)
+	// 			continue
+	// 		}
+	// 		if len(response) > 0 {
+	// 			broadcast <- response
+	// 		}
+	// 		time.Sleep(10 * time.Second) // Poll for updates
+	// 	}
+	// }()
 
 	go handleMessages()
 
