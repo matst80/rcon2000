@@ -166,7 +166,7 @@
         const q = queued.shift();
         try {
           socket.send(q);
-          addMessage("> " + q, "system");
+          //addMessage("> " + q, "system");
         } catch (e) {
           queued.unshift(q);
           break;
