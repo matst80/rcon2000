@@ -1,266 +1,869 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>rcon 2000</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --bg-alt: #161b22;
+        --panel: #1e2530cc;
+        --accent: #26cd71;
+        --accent-glow: 157 100% 50%;
+        --danger: #ff4d4f;
+        --text: #e6edf3;
+        --text-dim: #8b949e;
+        --radius: 14px;
+        --shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.5),
+          0 2px 4px -2px rgba(0, 0, 0, 0.3);
+        --mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco,
+          Consolas, monospace;
+        --trans: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>rcon 2000</title>
-  <style>
-    :root {
-      --color: #26cd71;
-      --size: 1rem;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    pre {
-      flex: 1;
-      font: "Fira Code", monospace;
-      font-size: var(--size);
-      padding: 1.5rem;
-      width: 100vw;
-    }
-
-    code {
-      word-break: break-all;
-      white-space: pre-wrap;
-    }
-
-    input {
-      font-size: var(--size);
-      background-color: #ffffff20;
-      border: 0;
-      width: 100%;
-      color: #fff;
-      padding: 1rem;
-    }
-
-    button {
-      font-size: var(--size);
-      border: 2px solid var(--color);
-      background-color: #333;
-      width: 100%;
-      color: var(--color);
-      padding: 1rem;
-    }
-
-    button em {
-      font-style: normal;
-    }
-
-    html,
-    body {
-      min-height: 100vh;
-      margin: 0;
-      padding: 0;
-      overscroll-behavior: none;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      background-color: #000;
-      color: #f3f3f3;
-    }
-
-    label {
-      font: "Fira Code", monospace;
-      font-size: var(--size);
-      word-break: break-all;
-      overflow: hidden;
-      padding: 1rem;
-    }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      padding: 1rem;
-      align-items: center;
-      justify-content: center;
-      background-color: #ffffff20;
-    }
-
-    .row {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      gap: 1rem;
-      align-items: center;
-      justify-content: center;
-    }
-
-    @media (min-width: 950px) {
-      form {
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        font-family: var(--mono);
+        background: radial-gradient(circle at 20% 20%, #14202e, #0d1117 60%);
+        color: var(--text);
+        display: flex;
         flex-direction: column;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1 {
+        font-size: clamp(1.1rem, 1.5vw + 0.6rem, 1.6rem);
+        margin: 0;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.85rem 1.25rem;
+        backdrop-filter: blur(12px);
+        background: linear-gradient(90deg, #1e2530cc, #1e253080);
+        border-bottom: 1px solid #30363d;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      header .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 4px #26cd7130, 0 0 12px 2px #26cd71aa;
       }
 
-      .row {
-        flex-direction: row;
+      .app {
+        flex: 1;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        max-width: 1400px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 0.75rem 0.9rem 1rem;
+        gap: 0.9rem;
+        position: relative;
+        width: min(100%, 1400px);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 1fr 310px;
+        gap: 1rem;
+        height: 100%;
+      }
+      @media (max-width: 1100px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .sidepanels {
+          order: -1;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
       }
 
-      input {
-        width: 200px;
+      .chat {
+        background: var(--panel);
+        border: 1px solid #30363d;
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        position: relative;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .messages {
+        flex: 1;
+        overflow: auto;
+        padding: 1rem 1rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        scroll-behavior: smooth;
+      }
+      .messages::-webkit-scrollbar {
+        width: 10px;
+      }
+      .messages::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .messages::-webkit-scrollbar-thumb {
+        background: #30363d;
+        border-radius: 20px;
+        border: 2px solid #1e2530;
+      }
+      .messages.paused::after {
+        content: "Autoscroll paused";
+        position: sticky;
+        top: 0;
+        align-self: center;
+        background: #ffb347;
+        color: #111;
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 2px 6px -2px #000;
+        letter-spacing: 0.05em;
+      }
+
+      .msg {
+        font-size: 0.85rem;
+        line-height: 1.35;
+        padding: 0.55rem 0.7rem 0.55rem 0.75rem;
+        border-radius: 10px;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        position: relative;
+        display: flex;
+        gap: 0.7rem;
+        align-items: flex-start;
+        animation: fadeIn 0.3s ease;
+      }
+      .msg + .msg.same {
+        margin-top: -0.35rem;
+      }
+      .msg:hover {
+        border-color: #3a424a;
+      }
+      .msg::before {
+        content: attr(data-time);
+        font-size: 0.6rem;
+        letter-spacing: 0.1em;
+        color: var(--text-dim);
+        opacity: 0.9;
+        padding-top: 0.2rem;
+      }
+      .msg span.payload {
+        flex: 1;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-variant-ligatures: none;
+        font-feature-settings: "calt" 0;
+      }
+      .msg.system {
+        background: #132a1d;
+        border-color: #1b4d32;
+      }
+      .msg.system span.payload {
+        color: #7ae8af;
+      }
+      .msg.error {
+        background: #2a1414;
+        border-color: #5a1f1f;
+      }
+      .msg.error span.payload {
+        color: #ffb4b4;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .compose {
+        display: flex;
+        gap: 0.6rem;
+        padding: 0.75rem 0.85rem 0.85rem;
+        border-top: 1px solid #30363d;
+        background: linear-gradient(#1e2530ee, #1e2530dd);
+      }
+      .compose form {
+        display: flex;
+        gap: 0.6rem;
         flex: 1;
       }
-
-      button {
-        width: auto;
+      .cmd-input-wrap {
+        position: relative;
+        flex: 1;
+      }
+      input#command {
+        width: 100%;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        color: var(--text);
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        font: 500 0.9rem/1 var(--mono);
+        outline: none;
+        transition: var(--trans);
+      }
+      input#command:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px #26cd7122, 0 0 0 1px var(--accent);
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      button#send {
+        background: linear-gradient(135deg, var(--accent), #1dc15e);
+        color: #061a10;
+        font-weight: 600;
+        border: 0;
+        padding: 0.85rem 1.1rem;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        letter-spacing: 0.05em;
+        position: relative;
+      }
+      button#send:hover {
+        filter: brightness(1.05);
+      }
+      button#send:active {
+        transform: translateY(1px);
+      }
+      .meta-hint {
+        font-size: 0.6rem;
+        color: var(--text-dim);
+        margin-top: 0.2rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
       }
 
-      button em {
+      /* Side panels */
+      .sidepanels {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid #30363d;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .panel h2 {
+        margin: 0;
+        font-size: 0.75rem;
+        letter-spacing: 0.15em;
+        font-weight: 600;
+        padding: 0.75rem 1rem;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        background: #222b35;
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .panel .group {
+        padding: 0.75rem 0.8rem 0.9rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+      }
+      .panel .subgroup {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 0.55rem 0.55rem 0.1rem;
+      }
+      .panel h3 {
+        margin: 0.35rem 0.5rem 0;
+        font: 600 0.6rem var(--mono);
+        letter-spacing: 0.15em;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        opacity: 0.9;
+      }
+      .panel button.quick {
+        --q-bg: #222b35;
+        background: var(--q-bg);
+        color: var(--text-dim);
+        border: 1px solid #2e3742;
+        border-radius: 8px;
+        padding: 0.55rem 0.7rem 0.6rem;
+        font: 0.65rem var(--mono);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        letter-spacing: 0.05em;
+        transition: var(--trans);
+        position: relative;
+      }
+      .panel button.quick em {
         font-style: normal;
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-        display: block;
+        filter: grayscale(0.2);
       }
-    }
-  </style>
-</head>
+      .panel button.quick:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px #26cd7115;
+      }
+      .panel button.quick:active {
+        transform: translateY(1px);
+      }
 
-<body>
-  <pre><code id="log"></code></pre>
-  <form id="form">
+      footer {
+        text-align: center;
+        padding: 0.75rem 1rem 0.9rem;
+        font-size: 0.6rem;
+        color: #4e5965;
+      }
+      footer a {
+        color: var(--text-dim);
+        text-decoration: none;
+      }
+      footer a:hover {
+        color: var(--accent);
+      }
+      .status-pill {
+        font-size: 0.55rem;
+        padding: 0.3rem 0.55rem 0.28rem;
+        background: #20302c;
+        color: #6ae7a8;
+        border: 1px solid #29523d;
+        border-radius: 1rem;
+        letter-spacing: 0.12em;
+        font-weight: 600;
+      }
+      .status-pill.off {
+        background: #352323;
+        color: #ffb4b4;
+        border-color: #5a2d2d;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: auto;
+      }
+      .toolbar button.small {
+        background: #222b35;
+        border: 1px solid #2e3742;
+        color: #889199;
+        font: 0.6rem var(--mono);
+        padding: 0.45rem 0.6rem 0.5rem;
+        border-radius: 7px;
+        letter-spacing: 0.06em;
+        cursor: pointer;
+      }
+      .toolbar button.small:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .toolbar button.small:active {
+        transform: translateY(1px);
+      }
 
-    <div class="row">
-      <input type="text" id="command" tabindex="0" list="commands" placeholder="Slask it here" />
-      <datalist id="commands">
-        <option value="help" />
-        <option value="sv_cheats 1" />
-        <option value="mp_autoteambalance 0" />
-        <option value="mp_limitteams 0" />
-        <option value="mp_maxrounds 100" />
-        <option value="mp_roundtime_defuse 30" />
-        <option value="sv_infinite_ammo 1" />
-        <option value="mp_startmoney 1000000" />
-        <option value="mp_afterroundmoney 1000000" />
-        <option value="game_mode 0" />
-        <option value="game_type 0" />
-        <option value="mp_friendlyfire false" />
-        <option value="sv_banid_enabled false" />
-        <option value="bot_quota_mode normal" />
-        <option value="bot_Add_ct" />
-        <option value="bot_kick" />
-        <option value="bot_add_t" />
-        <option value="mp_solid_teammates 0" />
-        <option value="sv_hegrenade_damage_multiplier 4.0" />
-        <option value="sv_hegrenade_radius_multiplier 2.0" />
-        <option value="ragdoll_gravity_scale 0.1" />
-        <option value="mp_autokick 0" />
-      </datalist>
-      <button type="submit" id="send">Send</button>
-    </div>
-    <div class="row">
-      <label>Game options</label>
+      .flash {
+        animation: flash 0.9s ease;
+      }
+      @keyframes flash {
+        0% {
+          box-shadow: 0 0 0 0 #26cd71cc;
+        }
+        70% {
+          box-shadow: 0 0 0 10px #26cd7100;
+        }
+        100% {
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
 
-      <button data-cmd="
-    		  	game_mode 0;
-    			game_type 0;
-    			sv_cheats 1;
-    			sv_infinite_ammo 1;
-    			sv_banid_enabled false;
-    			mp_friendlyfire false;
-    			mp_autokick 0;
-    			mp_startmoney 1000000;
-    			mp_afterroundmoney 1000000;
-    			mp_autoteambalance 0;
-    			mp_limitteams 0;
-    			mp_roundtime_defuse 30;
-    			mp_maxrounds 100;
-    			mp_solid_teammates 0;
-    		  ">
-        <em>🤠</em> Gibb game
-      </button>
+  <body>
+    <header>
+      <div class="dot" aria-hidden="true"></div>
+      <h1>
+        RCON 2000
+        <span
+          style="color: var(--text-dim); font-weight: 400; font-size: 0.75em"
+          >/ console chat</span
+        >
+      </h1>
+      <div class="toolbar">
+        <button class="small" id="clear-log" title="Clear log">Clear</button>
+        <button class="small" id="pause-scroll" title="Pause autoscroll">
+          Pause
+        </button>
+      </div>
+    </header>
+    <main class="app">
+      <div class="layout">
+        <section class="chat" aria-label="Console output">
+          <div
+            id="messages"
+            class="messages"
+            aria-live="polite"
+            aria-atomic="false"
+          ></div>
+          <div class="compose">
+            <form id="form" autocomplete="off" spellcheck="false">
+              <div class="cmd-input-wrap">
+                <input
+                  type="text"
+                  id="command"
+                  list="commands"
+                  placeholder="Type command and press Enter"
+                  autocomplete="off"
+                />
+                <div class="meta-hint" id="history-hint">↑↓ history</div>
+                <datalist id="commands">
+                  <option value="help" />
+                  <option value="sv_cheats 1" />
+                  <option value="mp_autoteambalance 0" />
+                  <option value="mp_limitteams 0" />
+                  <option value="mp_maxrounds 100" />
+                  <option value="mp_roundtime_defuse 30" />
+                  <option value="sv_infinite_ammo 1" />
+                  <option value="mp_startmoney 1000000" />
+                  <option value="mp_afterroundmoney 1000000" />
+                  <option value="game_mode 0" />
+                  <option value="game_type 0" />
+                  <option value="mp_friendlyfire false" />
+                  <option value="sv_banid_enabled false" />
+                  <option value="bot_quota_mode normal" />
+                  <option value="bot_add_ct" />
+                  <option value="bot_kick" />
+                  <option value="bot_add_t" />
+                  <option value="mp_solid_teammates 0" />
+                  <option value="sv_hegrenade_damage_multiplier 4.0" />
+                  <option value="sv_hegrenade_radius_multiplier 2.0" />
+                  <option value="ragdoll_gravity_scale 0.1" />
+                  <option value="mp_autokick 0" />
+                </datalist>
+              </div>
+              <div class="actions">
+                <button type="submit" id="send">Send</button>
+              </div>
+            </form>
+          </div>
+        </section>
 
-      <button data-cmd="
-    			sv_hegrenade_damage_multiplier 4.0;
-    			sv_hegrenade_radius_multiplier 2.0;
-    		  ">
-        <em> 🔥 </em>
-        Powerful grenades
-      </button>
+        <aside class="sidepanels" aria-label="Quick command panels">
+          <div class="panel" id="csPanel">
+            <h2>
+              Counter-Strike
+              <span class="status-pill" id="ws-status">CONNECTING</span>
+            </h2>
+            <div class="subgroup">
+              <h3>Options</h3>
+              <div class="group">
+                <button
+                  class="quick"
+                  data-cmd="game_mode 0; game_type 0; sv_cheats 1; sv_infinite_ammo 1; sv_banid_enabled false; mp_friendlyfire false; mp_autokick 0; mp_startmoney 1000000; mp_afterroundmoney 1000000; mp_autoteambalance 0; mp_limitteams 0; mp_roundtime_defuse 30; mp_maxrounds 100; mp_solid_teammates 0; "
+                >
+                  <em>🤠</em>Gibb game
+                </button>
+                <button
+                  class="quick"
+                  data-cmd="sv_hegrenade_damage_multiplier 4.0; sv_hegrenade_radius_multiplier 2.0; "
+                >
+                  <em>🔥</em>Grenades
+                </button>
+                <button class="quick" data-cmd="ragdoll_gravity_scale 0.1; ">
+                  <em>🪰</em>Ragdolls
+                </button>
+              </div>
+            </div>
+            <div class="subgroup">
+              <h3>Bots</h3>
+              <div class="group">
+                <button class="quick" data-cmd="bot_quota_mode normal; ">
+                  <em>✅</em>Enable
+                </button>
+                <button class="quick" data-cmd="bot_kick; ">
+                  <em>❌</em>Kick all
+                </button>
+                <button
+                  class="quick"
+                  data-cmd="bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; "
+                >
+                  <em>🚓</em>Add CT
+                </button>
+                <button
+                  class="quick"
+                  data-cmd="bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; "
+                >
+                  <em>🔫</em>Add T
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="panel" id="mcPanel">
+            <h2>Minecraft</h2>
+            <div class="subgroup">
+              <h3>World</h3>
+              <div class="group">
+                <button class="quick" data-cmd="time set day">
+                  <em>🌞</em>Day
+                </button>
+                <button class="quick" data-cmd="time set night">
+                  <em>🌚</em>Night
+                </button>
+                <button class="quick" data-cmd="weather clear">
+                  <em>☀️</em>Clear Wx
+                </button>
+                <button class="quick" data-cmd="weather rain">
+                  <em>🌧️</em>Rain
+                </button>
+                <button class="quick" data-cmd="weather thunder">
+                  <em>⚡</em>Storm
+                </button>
+                <button class="quick" data-cmd="difficulty peaceful">
+                  <em>🕊️</em>Peaceful
+                </button>
+                <button class="quick" data-cmd="difficulty hard">
+                  <em>💀</em>Hard
+                </button>
+              </div>
+            </div>
+            <div class="subgroup">
+              <h3>Rules</h3>
+              <div class="group">
+                <button class="quick" data-cmd="gamerule keepInventory true">
+                  <em>📦</em>KeepInv ON
+                </button>
+                <button class="quick" data-cmd="gamerule keepInventory false">
+                  <em>🗑️</em>KeepInv OFF
+                </button>
+                <button class="quick" data-cmd="gamerule doDaylightCycle false">
+                  <em>🕒</em>Freeze Time
+                </button>
+                <button class="quick" data-cmd="gamerule doDaylightCycle true">
+                  <em>▶️</em>Time Flow
+                </button>
+              </div>
+            </div>
+            <div class="subgroup">
+              <h3>Player</h3>
+              <div class="group">
+                <button class="quick" data-cmd="give @p diamond 64">
+                  <em>💎</em>Diamonds
+                </button>
+                <button
+                  class="quick"
+                  data-cmd="give @p netherite_sword{Enchantments:[{id:sharpness,lvl:5},{id:looting,lvl:3},{id:unbreaking,lvl:3}]} 1"
+                >
+                  <em>🗡️</em>Sword
+                </button>
+                <button
+                  class="quick"
+                  data-cmd="effect give @p minecraft:speed 120 1"
+                >
+                  <em>⚡</em>Speed 2m
+                </button>
+                <button class="quick" data-cmd="tp @p 0 150 0">
+                  <em>🧭</em>TP High
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <footer>
+        RCON 2000 – modern console.
+        <a href="https://github.com/matst80" target="_blank" rel="noopener"
+          >GitHub</a
+        >
+      </footer>
+    </main>
+  </body>
+  <script>
+    (function (doc, w) {
+      const $ = (id) => doc.getElementById(id);
+      const messagesEl = $("messages");
+      const commandInput = $("command");
+      const form = $("form");
+      const wsStatus = $("ws-status");
+      const clearBtn = $("clear-log");
+      const pauseBtn = $("pause-scroll");
 
-      <button data-cmd="
-    			ragdoll_gravity_scale 0.1;
-    		  ">
-        <em>🪰</em>
-        Floating ragdolls
-      </button>
-    </div>
-    <div class="row">
-      <label>Bots</label>
+      // Command history
+      const HISTORY_KEY = "rcon2000.history";
+      let history = [];
+      try {
+        history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      } catch (_) {
+        history = [];
+      }
+      let historyIndex = history.length;
+      const saveHistory = () =>
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-200)));
 
-      <button data-cmd="
-    		  bot_quota_mode normal;
-    		  ">
-        <em>✅</em> Enable
-      </button>
+      function timeNow() {
+        const d = new Date();
+        return d.toTimeString().slice(0, 8);
+      }
+      function htmlEncode(input) {
+        return input
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
 
-      <button data-cmd="bot_kick;"><em>❌</em> Kick all</button>
+      let autoScroll = true;
+      pauseBtn.addEventListener("click", () => {
+        autoScroll = !autoScroll;
+        pauseBtn.textContent = autoScroll ? "Pause" : "Resume";
+        messagesEl.classList.toggle("paused", !autoScroll);
+        if (autoScroll) scrollToBottom(true);
+      });
+      clearBtn.addEventListener("click", () => {
+        messagesEl.innerHTML = "";
+      });
 
-      <button
-        data-cmd="bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; bot_add_ct; ">
-        <em>🚓</em>
-        Add CT
-      </button>
+      function scrollToBottom(force = false) {
+        if (!autoScroll && !force) return;
+        messagesEl.scrollTop = messagesEl.scrollHeight + 200;
+      }
+      let scrollDebounce;
+      messagesEl.addEventListener("scroll", () => {
+        clearTimeout(scrollDebounce);
+        scrollDebounce = setTimeout(() => {
+          const nearBottom =
+            messagesEl.scrollHeight -
+              messagesEl.scrollTop -
+              messagesEl.clientHeight <
+            40;
+          if (!autoScroll && nearBottom) {
+            autoScroll = true;
+            pauseBtn.textContent = "Pause";
+            messagesEl.classList.remove("paused");
+          } else if (autoScroll && !nearBottom) {
+            autoScroll = false;
+            pauseBtn.textContent = "Resume";
+            messagesEl.classList.add("paused");
+          }
+        }, 90);
+      });
 
-      <button
-        data-cmd="bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; bot_add_t; ">
-        <em>🔫</em>
-        Add T
-      </button>
-    </div>
-  </form>
-</body>
-<script>
-  (function (doc, w) {
-    const byId = (id) => doc.getElementById(id)
+      function addMessage(raw, cls = "") {
+        const msg = doc.createElement("div");
+        msg.className = "msg " + cls;
+        msg.dataset.time = timeNow();
+        const span = doc.createElement("span");
+        span.className = "payload";
+        span.innerHTML = htmlEncode(raw);
+        msg.appendChild(span);
+        messagesEl.appendChild(msg);
+        const prev = msg.previousElementSibling;
+        if (prev && prev.dataset && prev.dataset.time === msg.dataset.time) {
+          msg.classList.add("same");
+        }
+        scrollToBottom();
+      }
 
-    const addEvent = (id, fn, evt = "click") =>
-      byId(id).addEventListener(evt, fn)
+      // Dynamic game panel toggling
+      function applyGame(g) {
+        if (!g) return;
+        const csPanel = doc.getElementById("csPanel");
+        const mcPanel = doc.getElementById("mcPanel");
+        if (csPanel && mcPanel) {
+          if (g === "minecraft") {
+            if (csPanel !== null) {
+              csPanel.style.display = "none";
+            }
+            mcPanel.style.display = "flex";
+            if (wsStatus && !mcPanel.querySelector("#ws-status")) {
+              mcPanel.querySelector("h2").appendChild(wsStatus);
+            }
+          } else if (g === "counter-strike" || g === "cs" || g === "csgo") {
+            csPanel.style.display = "flex";
+            mcPanel.style.display = "none";
+          } else {
+            csPanel.style.display = "flex";
+            mcPanel.style.display = "flex";
+          }
+        }
+        addMessage(`Game context: ${g}`, "system");
+      }
 
-    addEvent(
-      "form",
-      function (e) {
-        const cmdElm = byId("command")
-        socket.send(cmdElm.value)
-        cmdElm.value = ""
-        e.preventDefault()
-      },
-      "submit"
-    )
+      // Reconnecting WebSocket with backoff and queue
+      let socket = null,
+        reconnectAttempts = 0,
+        manualClose = false;
+      const MAX_BACKOFF = 15000;
+      const queued = [];
+      let currentGame = null;
+      function humanDelay(ms) {
+        if (ms < 1000) return ms + "ms";
+        return (ms / 1000).toFixed(1) + "s";
+      }
+      function updateStatus(state) {
+        if (state === true || state === "online") {
+          wsStatus.textContent = "ONLINE";
+          wsStatus.classList.remove("off");
+        } else if (state === "connecting") {
+          wsStatus.textContent = "CONNECTING";
+          wsStatus.classList.remove("off");
+        } else {
+          wsStatus.textContent = "OFFLINE";
+          wsStatus.classList.add("off");
+        }
+      }
+      function createSocket() {
+        updateStatus("connecting");
+        const url = `${location.protocol.replace("http", "ws")}//${
+          location.host
+        }/ws`;
+        socket = new WebSocket(url);
+        socket.addEventListener("open", () => {
+          updateStatus(true);
+          addMessage("Connected to server.", "system"); // flush queue
+          while (queued.length) {
+            const q = queued.shift();
+            try {
+              socket.send(q);
+              addMessage("> " + q, "system");
+            } catch (e) {
+              queued.unshift(q);
+              break;
+            }
+          }
+          reconnectAttempts = 0;
+        });
+        socket.addEventListener("close", () => {
+          if (manualClose) return;
+          updateStatus(false);
+          const delay =
+            Math.min(MAX_BACKOFF, 500 * Math.pow(2, reconnectAttempts++)) +
+            Math.round(Math.random() * 250);
+          addMessage(
+            `Connection closed. Reconnecting in ${humanDelay(delay)} ...`,
+            "error"
+          );
+          setTimeout(createSocket, delay);
+        });
+        socket.addEventListener("error", () => {
+          updateStatus(false);
+          addMessage("WebSocket error occurred.", "error");
+        });
+        socket.addEventListener("message", (event) => {
+          try {
+            if (event.data.startsWith("{")) {
+              const obj = JSON.parse(event.data);
+              if (obj && obj.type === "meta" && obj.game) {
+                currentGame = obj.game;
+                applyGame(obj.game);
+                return;
+              }
+            }
+          } catch (e) {}
+          addMessage(event.data);
+        });
+      }
+      createSocket();
 
-    for (const butt of doc.querySelectorAll("button[data-cmd]")) {
-      butt.addEventListener("click", (e) => {
-        const cmd = butt.dataset.cmd
-          .trim()
-          .split(/[\n\r\t]+/g)
-          .join(" ")
-        socket.send(cmd)
-      })
-    }
+      function sendCommand(cmd) {
+        if (!cmd.trim()) return;
+        if (socket && socket.readyState === 1) {
+          try {
+            socket.send(cmd);
+          } catch (e) {
+            queued.push(cmd);
+          }
+        } else {
+          queued.push(cmd);
+        }
+        addMessage("> " + cmd, "system flash");
+        history.push(cmd);
+        historyIndex = history.length;
+        saveHistory();
+      }
 
-    const socket = new WebSocket(
-      `${location.protocol.replace("http", "ws")}//${location.host}/ws`
-    )
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        sendCommand(commandInput.value);
+        commandInput.value = "";
+      });
+      commandInput.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowUp") {
+          if (historyIndex > 0) historyIndex--;
+          commandInput.value = history[historyIndex] || "";
+          setTimeout(
+            () =>
+              commandInput.setSelectionRange(
+                commandInput.value.length,
+                commandInput.value.length
+              ),
+            0
+          );
+          e.preventDefault();
+        } else if (e.key === "ArrowDown") {
+          if (historyIndex < history.length) historyIndex++;
+          commandInput.value = history[historyIndex] || "";
+          setTimeout(
+            () =>
+              commandInput.setSelectionRange(
+                commandInput.value.length,
+                commandInput.value.length
+              ),
+            0
+          );
+          e.preventDefault();
+        }
+      });
 
-    socket.addEventListener("open", () => {
-      console.log("connected")
-    })
+      // Quick command buttons
+      doc.querySelectorAll("button[data-cmd]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const cmd = btn.dataset.cmd
+            .trim()
+            .split(/[\n\r\t]+/g)
+            .join(" ");
+          sendCommand(cmd);
+        });
+      });
 
-    function htmlEncode(input) {
-      return input
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-    }
-
-    socket.onmessage = (event) => {
-      byId("log").innerHTML += htmlEncode(event.data) + "\n"
-    }
-  })(document, window);
-</script>
-
+      // Global keyboard focus
+      doc.addEventListener("keydown", (e) => {
+        if (e.key === "/" && doc.activeElement !== commandInput) {
+          e.preventDefault();
+          commandInput.focus();
+        }
+      });
+      w._rconUI = { addMessage, sendCommand, applyGame };
+    })(document, window);
+  </script>
 </html>

@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rcon2000
+  labels:
+    app: rcon2000
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rcon2000
+  template:
+    metadata:
+      labels:
+        app: rcon2000
+    spec:
+      containers:
+        - name: rcon2000
+          image: registry.knatofs.se/rcon2000:latest # Replace with your registry/image:tag
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 1337
+          env:
+            - name: RCON_HOST
+              value: "minecraft-rcon"
+            - name: RCON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rcon2000-secret
+                  key: rcon-password
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 1337
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 1337
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rcon2000-secret
+  labels:
+    app: rcon2000
+stringData:
+  rcon-password: "CHANGE_ME_PASSWORD" # TODO: set your RCON password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rcon2000
+  labels:
+    app: rcon2000
+spec:
+  selector:
+    app: rcon2000
+  ports:
+    - name: http
+      port: 80
+      targetPort: 1337
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rcon2000
+  labels:
+    app: rcon2000
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - rcon-mc.tornberg.me # TODO: set your public DNS name
+      secretName: rcon2000-tls
+  rules:
+    - host: rcon-mc.tornberg.me # TODO: set your public DNS name
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rcon2000
+                port:
+                  number: 80

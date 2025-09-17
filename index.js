@@ -5,17 +5,26 @@ var expressWs = require("express-ws")(app);
 const port = 1337;
 app.use(express.static("public"));
 
-const getEnv = (name) => {
+const getEnv = (name, replacement) => {
   const env = process.env[name];
-  if (!env) {
+  if (!env && !replacement) {
     throw new Error(`Missing env ${name}`);
   }
-  return env;
+  return env ?? replacement;
 };
 
-const host = getEnv("RCON_HOST");
+const host = getEnv("RCON_HOST", "localhost");
 const password = getEnv("RCON_PASSWORD");
-const rcon_port = process.env.RCON_PORT ? Number(process.env.RCON_PORT) : 27015;
+const rcon_port = process.env.RCON_PORT ? Number(process.env.RCON_PORT) : 25575;
+// Game type detection / configuration:
+// Explicit via GAME_TYPE env, otherwise simple heuristic on port (25575 -> minecraft, else counter-strike)
+const explicitGame = process.env.GAME_TYPE;
+const gameType = explicitGame
+  ? explicitGame.toLowerCase()
+  : rcon_port === 25575
+  ? "minecraft"
+  : "counter-strike";
+console.log(`[rcon2000] Starting for game type: ${gameType}`);
 
 client = new Rcon(host, rcon_port, password, {
   tcp: true,
@@ -61,6 +70,12 @@ const addSocketListener = (ws) => {
 
 app.ws("/ws", function (ws, req) {
   addSocketListener(ws);
+  // Send meta information first so UI can adapt
+  try {
+    ws.send(JSON.stringify({ type: "meta", game: gameType }));
+  } catch (e) {
+    console.error("Failed to send meta", e);
+  }
   ws.send("Welcome to the multiplayer rcon!");
 });
 
