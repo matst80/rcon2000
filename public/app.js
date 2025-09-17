@@ -160,6 +160,7 @@
     socket = new WebSocket(url);
     socket.addEventListener("open", () => {
       updateStatus(true);
+      messagesEl.innerHTML = "";
       addMessage("Connected to server.", "system"); // flush queue
       while (queued.length) {
         const q = queued.shift();

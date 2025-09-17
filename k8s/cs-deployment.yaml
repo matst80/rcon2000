@@ -1,32 +1,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rcon2000
+  name: cs-rcon2000
   labels:
-    app: rcon2000
+    app: cs-rcon2000
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rcon2000
+      app: cs-rcon2000
   template:
     metadata:
       labels:
-        app: rcon2000
+        app: cs-rcon2000
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
-        - name: rcon2000
+        - name: cs-rcon2000
           image: registry.knatofs.se/rcon2000:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 1337
           env:
             - name: RCON_HOST
-              value: "minecraft-rcon"
+              value: "cs2-rcon"
+            - name: RCON_PORT
+              value: "25515"
             - name: RCON_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: rcon2000-secret
+                  name: cs-rcon2000-secret
                   key: rcon-password
           resources:
             requests:
@@ -51,21 +55,21 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: rcon2000-secret
+  name: cs-rcon2000-secret
   labels:
-    app: rcon2000
+    app: cs-rcon2000
 stringData:
-  rcon-password: "CHANGE_ME_PASSWORD" # TODO: set your RCON password
+  rcon-password: "gibbgibbgibb" # TODO: set your RCON password
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: rcon2000
+  name: cs-rcon2000
   labels:
-    app: rcon2000
+    app: cs-rcon2000
 spec:
   selector:
-    app: rcon2000
+    app: cs-rcon2000
   ports:
     - name: http
       port: 80
@@ -75,25 +79,25 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: rcon2000
+  name: cs-rcon2000
   labels:
-    app: rcon2000
+    app: cs-rcon2000
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - rcon-mc.tornberg.me # TODO: set your public DNS name
-      secretName: rcon2000-tls
+        - rcon-cs.tornberg.me # TODO: set your public DNS name
+      secretName: cs-rcon2000-tls
   rules:
-    - host: rcon-mc.tornberg.me # TODO: set your public DNS name
+    - host: rcon-cs.tornberg.me # TODO: set your public DNS name
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: rcon2000
+                name: cs-rcon2000
                 port:
                   number: 80
