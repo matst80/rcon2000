@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: rcon2000
-          image: registry.knatofs.se/rcon2000:latest # Replace with your registry/image:tag
+          image: rcon2000-go:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 1337
