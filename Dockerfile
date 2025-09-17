@@ -12,4 +12,4 @@ WORKDIR /app
 COPY --from=builder /rcon2000 .
 COPY public ./public
 EXPOSE 1337
-CMD ["/rcon2000"]
+CMD ["./rcon2000"]
