@@ -446,6 +446,11 @@ footer a:hover {
 	cursor: pointer;
 }
 
+.toolbar button.small:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 .toolbar button.small:hover {
 	border-color: var(--accent);
 	color: var(--accent);
