@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"sync"
 
 	"github.com/gorcon/rcon"
@@ -45,16 +45,8 @@ func getRconClient() (*rcon.Conn, error) {
 		log.Println("RCON connection lost, will attempt to reconnect on next command.")
 	}
 
-	rconHost := getEnv("RCON_HOST", "localhost")
-	rconPassword := getEnv("RCON_PASSWORD", "")
-	rconPortStr := getEnv("RCON_PORT", "25575")
-	rconPort, err := strconv.Atoi(rconPortStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid RCON_PORT: %v", err)
-	}
-
-	log.Printf("Attempting to connect to RCON server at %s:%d", rconHost, rconPort)
-	newRconClient, err := rcon.Dial(fmt.Sprintf("%s:%d", rconHost, rconPort), rconPassword)
+	log.Printf("Attempting to connect to RCON server")
+	newRconClient, err := CurrentConfig.RCon.Conenct()
 	if err != nil {
 		return nil, err
 	}
@@ -75,27 +67,11 @@ func getEnv(key, fallback string) string {
 }
 
 func main() {
-	initKube()
-	port := "1337"
 
-	rconPortStr := getEnv("RCON_PORT", "25575")
-	rconPort, err := strconv.Atoi(rconPortStr)
-	if err != nil {
-		log.Fatalf("Invalid RCON_PORT: %v", err)
-	}
-
-	explicitGame := os.Getenv("GAME_TYPE")
-	if explicitGame != "" {
-		gameType = explicitGame
-	} else if rconPort == 25575 {
-		gameType = "minecraft"
-	} else {
-		gameType = "counter-strike"
-	}
-	log.Printf("[rcon2000] Starting for game type: %s\n", gameType)
+	log.Printf("[rcon2000] Starting for game type: %s\n", CurrentConfig.RCon.Game)
 
 	// Attempt initial connection, but don't fail if it doesn't work
-	_, err = getRconClient()
+	_, err := getRconClient()
 	if err != nil {
 		log.Printf("Initial RCON connection failed, will retry on command: %v", err)
 	}
@@ -104,11 +80,64 @@ func main() {
 
 	http.Handle("/", http.FileServer(http.Dir("./public")))
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/api/gameserver", handleGameServer)
-	http.HandleFunc("/api/logs", handlePodLogs)
 
-	log.Printf("HTTP server starting on :%s", port)
-	err = http.ListenAndServe(":"+port, nil)
+	if CurrentConfig.K8s != nil {
+		gw, err := NewGameWatcher(*CurrentConfig.K8s)
+		if err != nil {
+			log.Fatal(err)
+		}
+		http.HandleFunc("GET /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
+			d, err := gw.GetDeployment()
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to get deployment: %v", err), http.StatusInternalServerError)
+				return
+			}
+			json.NewEncoder(w).Encode(d)
+		})
+		http.HandleFunc("POST /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
+			err := gw.Scale(1)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to scale deployment: %v", err), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusAccepted)
+		})
+		http.HandleFunc("DELETE /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
+			err := gw.Scale(0)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to scale deployment: %v", err), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusAccepted)
+		})
+		http.HandleFunc("/api/logs", func(w http.ResponseWriter, r *http.Request) {
+			ws, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				log.Printf("Failed to upgrade to websocket: %v", err)
+				return
+			}
+			defer ws.Close()
+			podLogs, err := gw.GetLogs()
+			if err != nil {
+				log.Printf("Error streaming logs: %v", err)
+				ws.WriteMessage(websocket.TextMessage, []byte("Error streaming logs."))
+				return
+			}
+			defer podLogs.Close()
+
+			scanner := bufio.NewScanner(podLogs)
+			for scanner.Scan() {
+				err := ws.WriteMessage(websocket.TextMessage, scanner.Bytes())
+				if err != nil {
+					log.Printf("Websocket write error, closing log stream: %v", err)
+					break
+				}
+			}
+		})
+	}
+
+	log.Printf("HTTP server starting on 1337")
+	err = http.ListenAndServe(":1337", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
