@@ -105,6 +105,7 @@ func main() {
 	http.Handle("/", http.FileServer(http.Dir("./public")))
 	http.HandleFunc("/ws", handleConnections)
 	http.HandleFunc("/api/gameserver", handleGameServer)
+	http.HandleFunc("/api/logs", handlePodLogs)
 
 	log.Printf("HTTP server starting on :%s", port)
 	err = http.ListenAndServe(":"+port, nil)

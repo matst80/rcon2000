@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gorilla/websocket"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -24,7 +27,10 @@ func initKube() {
 	if err != nil {
 		log.Printf("Unable to get in-cluster config, using fallback to default: %v", err)
 		// Fallback for local development
-		config, err = clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+		home := homedir.HomeDir()
+		if home != "" {
+			config, err = clientcmd.BuildConfigFromFlags("", filepath.Join(home, ".kube", "config"))
+		}
 		if err != nil {
 			log.Fatalf("Failed to get kubeconfig: %v", err)
 		}
@@ -45,14 +51,52 @@ func initKube() {
 	log.Printf("Operating in namespace: %s", namespace)
 }
 
-func getGameServerDeploymentName() string {
-	rconHost := getEnv("RCON_DEPLOYMENT", "minecraft")
-	if rconHost == "" {
-		return ""
+func handlePodLogs(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Failed to upgrade to websocket: %v", err)
+		return
 	}
-	// Assuming RCON_HOST is like 'minecraft-rcon' or 'cs2-rcon'
-	// and deployment is 'minecraft' or 'cs2'
-	return rconHost
+	defer ws.Close()
+
+	deploymentName := getEnv("RCON_DEPLOYMENT", "")
+	if deploymentName == "" {
+		log.Println("Game server deployment not configured for logs")
+		ws.WriteMessage(websocket.TextMessage, []byte("Game server deployment not configured."))
+		return
+	}
+
+	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "app=" + deploymentName,
+	})
+	if err != nil || len(pods.Items) == 0 {
+		log.Printf("Could not find pod for deployment %s: %v", deploymentName, err)
+		ws.WriteMessage(websocket.TextMessage, []byte("Could not find running game server pod."))
+		return
+	}
+	podName := pods.Items[0].Name
+
+	log.Printf("Streaming logs for pod %s", podName)
+
+	req := clientset.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
+		Follow: true,
+	})
+	podLogs, err := req.Stream(context.TODO())
+	if err != nil {
+		log.Printf("Error streaming logs: %v", err)
+		ws.WriteMessage(websocket.TextMessage, []byte("Error streaming logs."))
+		return
+	}
+	defer podLogs.Close()
+
+	scanner := bufio.NewScanner(podLogs)
+	for scanner.Scan() {
+		err := ws.WriteMessage(websocket.TextMessage, scanner.Bytes())
+		if err != nil {
+			log.Printf("Websocket write error, closing log stream: %v", err)
+			break
+		}
+	}
 }
 
 func handleGameServer(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +105,7 @@ func handleGameServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deploymentName := getGameServerDeploymentName()
+	deploymentName := getEnv("RCON_DEPLOYMENT", "")
 	if deploymentName == "" {
 		http.Error(w, "Game server deployment not configured", http.StatusInternalServerError)
 		return
