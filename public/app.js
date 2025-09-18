@@ -41,10 +41,6 @@
   const saveHistory = () =>
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-200)));
 
-  function timeNow() {
-    const d = new Date();
-    return d.toTimeString().slice(0, 8);
-  }
   function htmlEncode(input) {
     return input
       .replace(/&/g, "&amp;")
@@ -91,16 +87,11 @@
   function addMessage(raw, cls = "") {
     const msg = doc.createElement("div");
     msg.className = "msg " + cls;
-    msg.dataset.time = timeNow();
     const span = doc.createElement("span");
     span.className = "payload";
     span.innerHTML = htmlEncode(raw);
     msg.appendChild(span);
     messagesEl.appendChild(msg);
-    const prev = msg.previousElementSibling;
-    if (prev && prev.dataset && prev.dataset.time === msg.dataset.time) {
-      msg.classList.add("same");
-    }
     scrollToBottom();
   }
 

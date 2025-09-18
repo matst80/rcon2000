@@ -130,6 +130,8 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			mutex.Unlock()
 			break
 		}
+		// Also broadcast the command to other clients
+		broadcast <- string(msg)
 		// Send message to RCON
 		if rconClient != nil {
 			log.Printf("Sending to RCON: %s", string(msg))
@@ -141,8 +143,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				broadcast <- response
 			}
 		}
-		// Also broadcast the command to other clients
-		broadcast <- string(msg)
+
 	}
 }
 
