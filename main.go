@@ -29,6 +29,40 @@ var messageHistory []string
 
 var rconClient *rcon.Conn
 var gameType string
+var rconMutex = &sync.Mutex{}
+
+func getRconClient() (*rcon.Conn, error) {
+	rconMutex.Lock()
+	defer rconMutex.Unlock()
+
+	if rconClient != nil {
+		// A simple ping-like command could work. 'help' is a good candidate for many servers.
+		if _, err := rconClient.Execute("help"); err == nil {
+			return rconClient, nil
+		}
+		rconClient.Close()
+		rconClient = nil
+		log.Println("RCON connection lost, will attempt to reconnect on next command.")
+	}
+
+	rconHost := getEnv("RCON_HOST", "localhost")
+	rconPassword := getEnv("RCON_PASSWORD", "")
+	rconPortStr := getEnv("RCON_PORT", "25575")
+	rconPort, err := strconv.Atoi(rconPortStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid RCON_PORT: %v", err)
+	}
+
+	log.Printf("Attempting to connect to RCON server at %s:%d", rconHost, rconPort)
+	newRconClient, err := rcon.Dial(fmt.Sprintf("%s:%d", rconHost, rconPort), rconPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println("Successfully connected to RCON server!")
+	rconClient = newRconClient
+	return rconClient, nil
+}
 
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
@@ -41,10 +75,9 @@ func getEnv(key, fallback string) string {
 }
 
 func main() {
+	initKube()
 	port := "1337"
 
-	rconHost := getEnv("RCON_HOST", "localhost")
-	rconPassword := getEnv("RCON_PASSWORD", "")
 	rconPortStr := getEnv("RCON_PORT", "25575")
 	rconPort, err := strconv.Atoi(rconPortStr)
 	if err != nil {
@@ -61,35 +94,17 @@ func main() {
 	}
 	log.Printf("[rcon2000] Starting for game type: %s\n", gameType)
 
-	rconClient, err = rcon.Dial(fmt.Sprintf("%s:%d", rconHost, rconPort), rconPassword)
+	// Attempt initial connection, but don't fail if it doesn't work
+	_, err = getRconClient()
 	if err != nil {
-		log.Fatalf("Failed to connect to RCON server: %v", err)
+		log.Printf("Initial RCON connection failed, will retry on command: %v", err)
 	}
-	defer rconClient.Close()
-
-	log.Println("Authed with RCON server!")
-
-	// // Read from RCON and broadcast to websockets
-	// go func() {
-	// 	for {
-	// 		response, err := rconClient.Execute("help") // Sending a command to keep connection alive and get updates
-	// 		if err != nil {
-	// 			log.Printf("Error reading from RCON: %v", err)
-	// 			// Reconnect logic could be added here
-	// 			time.Sleep(5 * time.Second)
-	// 			continue
-	// 		}
-	// 		if len(response) > 0 {
-	// 			broadcast <- response
-	// 		}
-	// 		time.Sleep(10 * time.Second) // Poll for updates
-	// 	}
-	// }()
 
 	go handleMessages()
 
 	http.Handle("/", http.FileServer(http.Dir("./public")))
 	http.HandleFunc("/ws", handleConnections)
+	http.HandleFunc("/api/gameserver", handleGameServer)
 
 	log.Printf("HTTP server starting on :%s", port)
 	err = http.ListenAndServe(":"+port, nil)
@@ -133,11 +148,16 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		// Also broadcast the command to other clients
 		broadcast <- string(msg)
 		// Send message to RCON
-		if rconClient != nil {
+		client, err := getRconClient()
+		if err != nil {
+			log.Printf("Failed to get RCON client: %v", err)
+			broadcast <- fmt.Sprintf("Failed to connect to RCON: %v", err)
+		} else {
 			log.Printf("Sending to RCON: %s", string(msg))
-			response, err := rconClient.Execute(string(msg))
+			response, err := client.Execute(string(msg))
 			if err != nil {
 				log.Printf("RCON send error: %v", err)
+				broadcast <- fmt.Sprintf("RCON command failed: %v", err)
 			}
 			if len(response) > 0 {
 				broadcast <- response

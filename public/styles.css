@@ -472,3 +472,13 @@ footer a:hover {
 		box-shadow: none;
 	}
 }
+
+#gameServerBtn.stop {
+	background-color: #f44336;
+	color: #000;
+}
+
+#gameServerBtn.start {
+	background-color: #4CAF50;
+	color: #000;
+}
