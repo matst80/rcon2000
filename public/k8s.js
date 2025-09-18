@@ -13,14 +13,14 @@ function updateGameServerStatus() {
 function updateGameServerButton() {
   const button = document.getElementById("gameServerBtn");
   if (!button) return;
-
+  button.disabled = false;
   if (gameServerStatus === "running") {
-    button.textContent = "Stop Game Server";
+    button.textContent = "Stop";
     button.onclick = stopGameServer;
     button.classList.remove("start");
     button.classList.add("stop");
   } else {
-    button.textContent = "Start Game Server";
+    button.textContent = "Start";
     button.onclick = startGameServer;
     button.classList.remove("stop");
     button.classList.add("start");
@@ -55,7 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const controls = document.createElement("button");
   controls.id = "gameServerBtn";
   controls.className = "k8s small";
-  controls.innerHTML = `Loading...`;
+  controls.innerHTML = `...`;
+  controls.disabled = true;
   document.querySelector("div.toolbar")?.appendChild(controls);
 
   updateGameServerStatus();
