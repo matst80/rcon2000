@@ -63,7 +63,7 @@ func (c RconConfig) RconConnectionString() string {
 	return fmt.Sprintf("%s:%s", c.HostName, c.Port)
 }
 
-func (c RconConfig) Conenct() (*rcon.Conn, error) {
+func (c RconConfig) Connect() (*rcon.Conn, error) {
 	return rcon.Dial(c.RconConnectionString(), c.Password)
 }
 

@@ -183,16 +183,34 @@
     });
     socket.addEventListener("message", (event) => {
       try {
-        if (event.data.startsWith("{")) {
-          const obj = JSON.parse(event.data);
-          if (obj && obj.type === "meta" && obj.game) {
-            currentGame = obj.game;
-            applyGame(obj.game);
-            return;
+        const obj = JSON.parse(event.data);
+        if (obj && obj.type) {
+          switch (obj.type) {
+            case "meta":
+              if (obj.game) {
+                currentGame = obj.game;
+                applyGame(obj.game);
+              }
+              return;
+            case "response":
+            case "log":
+            case "error":
+            case "text":
+              let cls = obj.type;
+              if (obj.ok === false) {
+                cls += " error";
+              } else if (obj.ok === true) {
+                cls += " success";
+              }
+              if (obj.data) {
+                addMessage(obj.data, cls);
+              }
+              return;
           }
         }
-      } catch (e) {}
-      addMessage(event.data);
+      } catch (e) {
+        // Not a json message, or malformed
+      }
     });
   }
   createSocket();

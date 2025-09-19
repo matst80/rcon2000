@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,58 +16,203 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-var clients = make(map[*websocket.Conn]bool)
-var broadcast = make(chan string)
-var mutex = &sync.Mutex{}
+const maxHistorySize = 10
 
-const maxHistorySize = 50
+type SocketHandler struct {
+	RconConfig
+	connectionMutex *sync.RWMutex
+	historyMutex    *sync.RWMutex
+	rconClient      *rcon.Conn
+	messageHistory  []BaseMessage
+	clients         map[*websocket.Conn]struct{}
+}
 
-var messageHistory []string
+func NewSocketHandler(rconConfig RconConfig) *SocketHandler {
 
-var rconClient *rcon.Conn
-var rconMutex = &sync.Mutex{}
+	sh := &SocketHandler{
+		RconConfig:      rconConfig,
+		connectionMutex: &sync.RWMutex{},
+		historyMutex:    &sync.RWMutex{},
+		messageHistory:  make([]BaseMessage, 0, maxHistorySize),
+		clients:         make(map[*websocket.Conn]struct{}),
+	}
+	return sh
+}
 
-func getRconClient() (*rcon.Conn, error) {
-	rconMutex.Lock()
-	defer rconMutex.Unlock()
+type BaseMessage interface {
+	Send(*websocket.Conn) error
+}
 
-	if rconClient != nil {
+type Message struct {
+	Type string `json:"type"`
+}
+
+type TextMessage struct {
+	Message
+	Data string `json:"data"`
+}
+
+func (m *TextMessage) Send(conn *websocket.Conn) error {
+	return conn.WriteJSON(m)
+}
+
+type ResponseMessage struct {
+	Message
+	Data   string `json:"data"`
+	Origin string `json:"origin"`
+	Ok     bool   `json:"ok"`
+}
+
+func (m *ResponseMessage) Send(conn *websocket.Conn) error {
+	return conn.WriteJSON(m)
+}
+
+type MetaMessage struct {
+	Message
+	Game string `json:"game"`
+}
+
+func (m *MetaMessage) Send(conn *websocket.Conn) error {
+	return conn.WriteJSON(m)
+}
+
+type ConnectionMessage struct {
+	Message
+	Connected bool `json:"connected"`
+}
+
+func (h *SocketHandler) getRconClient() (*rcon.Conn, error) {
+	h.connectionMutex.Lock()
+	defer h.connectionMutex.Unlock()
+
+	if h.rconClient != nil {
 		// A simple ping-like command could work. 'help' is a good candidate for many servers.
-		if _, err := rconClient.Execute("help"); err == nil {
-			return rconClient, nil
+		if _, err := h.rconClient.Execute("help"); err == nil {
+			return h.rconClient, nil
 		}
-		rconClient.Close()
-		rconClient = nil
+		h.rconClient.Close()
+		h.rconClient = nil
 		log.Println("RCON connection lost, will attempt to reconnect on next command.")
 	}
 
-	log.Printf("Attempting to connect to RCON server")
-	newRconClient, err := CurrentConfig.RCon.Conenct()
+	newRconClient, err := h.RconConfig.Connect()
 	if err != nil {
+		log.Printf("Failed to connect to RCON server: %v", err)
 		return nil, err
 	}
 
 	log.Println("Successfully connected to RCON server!")
-	rconClient = newRconClient
-	return rconClient, nil
+	h.rconClient = newRconClient
+	return h.rconClient, nil
+}
+
+func (h *SocketHandler) HandleConnections(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("WebSocket upgrade error: %v", err)
+		return
+	}
+	defer ws.Close()
+	h.connectionMutex.Lock()
+	h.clients[ws] = struct{}{}
+	h.connectionMutex.Unlock()
+
+	// Send meta information
+	meta := MetaMessage{
+		Message: Message{Type: "meta"},
+		Game:    CurrentConfig.RCon.Game,
+	}
+	meta.Send(ws)
+
+	h.historyMutex.RLock()
+
+	for _, msg := range h.messageHistory {
+		msg.Send(ws)
+	}
+	h.historyMutex.RUnlock()
+
+	for {
+		_, msg, err := ws.ReadMessage()
+		if err != nil {
+			h.connectionMutex.Lock()
+			delete(h.clients, ws)
+			h.connectionMutex.Unlock()
+			break
+		}
+		// Also broadcast the command to other clients
+		h.BroadcastMessage(string(msg))
+		// Send message to RCON
+		client, err := h.getRconClient()
+		if err != nil {
+			log.Printf("Failed to get RCON client: %v", err)
+
+			ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Failed to connect to RCON: %v", err)))
+		} else {
+			response, err := client.Execute(string(msg))
+			if err != nil {
+				log.Printf("RCON send error: %v", err)
+				h.BroadcastResponse(fmt.Sprintf("RCON command failed: %v", err), "rcon", false)
+
+			}
+			if len(response) > 0 {
+				h.BroadcastResponse(response, "rcon", true)
+			}
+		}
+
+	}
+}
+
+func (h *SocketHandler) BroadcastResponse(message string, origin string, ok bool) {
+	resp := ResponseMessage{
+		Message: Message{Type: "response"},
+		Data:    message,
+		Origin:  origin,
+		Ok:      ok,
+	}
+	h.sendMessage(&resp)
+}
+
+func (h *SocketHandler) sendMessage(msg BaseMessage) {
+	h.historyMutex.Lock()
+
+	if len(h.messageHistory) >= maxHistorySize {
+		h.messageHistory = h.messageHistory[1:]
+	}
+	h.messageHistory = append(h.messageHistory, msg)
+	h.historyMutex.Unlock()
+
+	h.connectionMutex.Lock()
+	for client := range h.clients {
+		err := msg.Send(client)
+		if err != nil {
+			log.Printf("WebSocket write error: %v", err)
+			client.Close()
+			delete(h.clients, client)
+		}
+	}
+	h.connectionMutex.Unlock()
+}
+
+func (h *SocketHandler) BroadcastMessage(message string) {
+	// Add to history
+	msg := TextMessage{
+		Message: Message{Type: "text"},
+		Data:    message,
+	}
+	h.sendMessage(&msg)
 }
 
 func main() {
 
 	log.Printf("[rcon2000] Starting for game type: %s\n", CurrentConfig.RCon.Game)
 
-	// Attempt initial connection, but don't fail if it doesn't work
-	_, err := getRconClient()
-	if err != nil {
-		log.Printf("Initial RCON connection failed, will retry on command: %v", err)
-	}
-
-	go handleMessages()
+	sh := NewSocketHandler(CurrentConfig.RCon)
 
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir("./public")))
-	mux.HandleFunc("/ws", handleConnections)
+	mux.HandleFunc("/ws", sh.HandleConnections)
 
 	if CurrentConfig.K8s != nil {
 		gw, err := NewGameWatcher(*CurrentConfig.K8s)
@@ -79,85 +223,8 @@ func main() {
 	}
 
 	log.Printf("HTTP server starting on 1337")
-	err = http.ListenAndServe(":1337", mux)
+	err := http.ListenAndServe(":1337", mux)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
-	}
-}
-
-func handleConnections(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer ws.Close()
-
-	mutex.Lock()
-	clients[ws] = true
-	mutex.Unlock()
-
-	// Send meta information
-	meta := map[string]string{"type": "meta", "game": CurrentConfig.RCon.Game}
-	metaJSON, _ := json.Marshal(meta)
-	ws.WriteMessage(websocket.TextMessage, metaJSON)
-	ws.WriteMessage(websocket.TextMessage, []byte("Welcome to the multiplayer rcon!"))
-
-	// Send message history
-	mutex.Lock()
-	for _, msg := range messageHistory {
-		ws.WriteMessage(websocket.TextMessage, []byte(msg))
-	}
-	mutex.Unlock()
-
-	for {
-		_, msg, err := ws.ReadMessage()
-		if err != nil {
-			mutex.Lock()
-			delete(clients, ws)
-			mutex.Unlock()
-			break
-		}
-		// Also broadcast the command to other clients
-		broadcast <- string(msg)
-		// Send message to RCON
-		client, err := getRconClient()
-		if err != nil {
-			log.Printf("Failed to get RCON client: %v", err)
-			broadcast <- fmt.Sprintf("Failed to connect to RCON: %v", err)
-		} else {
-			log.Printf("Sending to RCON: %s", string(msg))
-			response, err := client.Execute(string(msg))
-			if err != nil {
-				log.Printf("RCON send error: %v", err)
-				broadcast <- fmt.Sprintf("RCON command failed: %v", err)
-			}
-			if len(response) > 0 {
-				broadcast <- response
-			}
-		}
-
-	}
-}
-
-func handleMessages() {
-	for {
-		msg := <-broadcast
-
-		mutex.Lock()
-		// Add to history
-		if len(messageHistory) >= maxHistorySize {
-			messageHistory = messageHistory[1:]
-		}
-		messageHistory = append(messageHistory, msg)
-
-		for client := range clients {
-			err := client.WriteMessage(websocket.TextMessage, []byte(msg))
-			if err != nil {
-				log.Printf("error: %v", err)
-				client.Close()
-				delete(clients, client)
-			}
-		}
-		mutex.Unlock()
 	}
 }
