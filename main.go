@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -78,62 +77,17 @@ func main() {
 
 	go handleMessages()
 
-	http.Handle("/", http.FileServer(http.Dir("./public")))
-	http.HandleFunc("/ws", handleConnections)
+	mux := http.NewServeMux()
+
+	mux.Handle("/", http.FileServer(http.Dir("./public")))
+	mux.HandleFunc("/ws", handleConnections)
 
 	if CurrentConfig.K8s != nil {
 		gw, err := NewGameWatcher(*CurrentConfig.K8s)
 		if err != nil {
 			log.Fatal(err)
 		}
-		http.HandleFunc("GET /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
-			d, err := gw.GetDeployment()
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to get deployment: %v", err), http.StatusInternalServerError)
-				return
-			}
-			json.NewEncoder(w).Encode(d)
-		})
-		http.HandleFunc("POST /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
-			err := gw.Scale(1)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to scale deployment: %v", err), http.StatusInternalServerError)
-				return
-			}
-			w.WriteHeader(http.StatusAccepted)
-		})
-		http.HandleFunc("DELETE /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
-			err := gw.Scale(0)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to scale deployment: %v", err), http.StatusInternalServerError)
-				return
-			}
-			w.WriteHeader(http.StatusAccepted)
-		})
-		http.HandleFunc("/api/logs", func(w http.ResponseWriter, r *http.Request) {
-			ws, err := upgrader.Upgrade(w, r, nil)
-			if err != nil {
-				log.Printf("Failed to upgrade to websocket: %v", err)
-				return
-			}
-			defer ws.Close()
-			podLogs, err := gw.GetLogs()
-			if err != nil {
-				log.Printf("Error streaming logs: %v", err)
-				ws.WriteMessage(websocket.TextMessage, []byte("Error streaming logs."))
-				return
-			}
-			defer podLogs.Close()
-
-			scanner := bufio.NewScanner(podLogs)
-			for scanner.Scan() {
-				err := ws.WriteMessage(websocket.TextMessage, scanner.Bytes())
-				if err != nil {
-					log.Printf("Websocket write error, closing log stream: %v", err)
-					break
-				}
-			}
-		})
+		gw.RegisterHandlers(mux)
 	}
 
 	log.Printf("HTTP server starting on 1337")

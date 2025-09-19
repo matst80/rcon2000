@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
+	"net/http"
 
+	"github.com/gorilla/websocket"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,4 +78,55 @@ func (w *GameWatcher) Scale(replicas int32) error {
 	deployment.Spec.Replicas = &replicas
 	_, err = clientset.AppsV1().Deployments(namespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
 	return err
+}
+
+func (gw *GameWatcher) RegisterHandlers(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
+		d, err := gw.GetDeployment()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get deployment: %v", err), http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(d)
+	})
+	mux.HandleFunc("POST /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
+		err := gw.Scale(1)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to scale deployment: %v", err), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
+	})
+	mux.HandleFunc("DELETE /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
+		err := gw.Scale(0)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to scale deployment: %v", err), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
+	})
+	mux.HandleFunc("/api/logs", func(w http.ResponseWriter, r *http.Request) {
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Printf("Failed to upgrade to websocket: %v", err)
+			return
+		}
+		defer ws.Close()
+		podLogs, err := gw.GetLogs()
+		if err != nil {
+			log.Printf("Error streaming logs: %v", err)
+			ws.WriteMessage(websocket.TextMessage, []byte("Error streaming logs."))
+			return
+		}
+		defer podLogs.Close()
+
+		scanner := bufio.NewScanner(podLogs)
+		for scanner.Scan() {
+			err := ws.WriteMessage(websocket.TextMessage, scanner.Bytes())
+			if err != nil {
+				log.Printf("Websocket write error, closing log stream: %v", err)
+				break
+			}
+		}
+	})
 }
