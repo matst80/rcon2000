@@ -22,6 +22,16 @@ type RconConfig struct {
 
 type K8sConfig struct {
 	DeploymentName string
+	Namespace      string
+}
+
+func (k *K8sConfig) getDefaultNamespace() string {
+	ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err != nil {
+		return "game" //"default"
+	} else {
+		return string(ns)
+	}
 }
 
 func (k *K8sConfig) Connect() (*kubernetes.Clientset, error) {
@@ -36,6 +46,9 @@ func (k *K8sConfig) Connect() (*kubernetes.Clientset, error) {
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		log.Printf("Successfully loaded in-cluster config")
+		k.Namespace = k.getDefaultNamespace()
 	}
 
 	return kubernetes.NewForConfig(config)
@@ -73,13 +86,20 @@ func init() {
 	if host, ok := os.LookupEnv("RCON_HOST"); ok {
 		CurrentConfig.RCon.HostName = host
 	}
+	if password, ok := os.LookupEnv("RCON_PASSWORD"); ok {
+		CurrentConfig.RCon.Password = password
+	}
 	if gameType, ok := os.LookupEnv("GAME_TYPE"); ok {
 		CurrentConfig.RCon.Game = gameType
 	}
 	if k8sDeployment, ok := os.LookupEnv("RCON_DEPLOYMENT"); ok {
-
+		namespace := "game" //"default"
+		if ns, ok := os.LookupEnv("RCON_NAMESPACE"); ok {
+			namespace = ns
+		}
 		CurrentConfig.K8s = &K8sConfig{
 			DeploymentName: k8sDeployment,
+			Namespace:      namespace,
 		}
 	}
 

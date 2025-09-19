@@ -17,9 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var clientset *kubernetes.Clientset
-var namespace string
-
 type GameWatcher struct {
 	K8sConfig
 	client *kubernetes.Clientset
@@ -49,21 +46,21 @@ func NewGameWatcher(config K8sConfig) (*GameWatcher, error) {
 }
 
 func (w *GameWatcher) GetDeployment() (*v1.Deployment, error) {
-	return w.getClient().AppsV1().Deployments(namespace).Get(context.TODO(), w.DeploymentName, metav1.GetOptions{})
+	return w.getClient().AppsV1().Deployments(w.Namespace).Get(context.TODO(), w.DeploymentName, metav1.GetOptions{})
 }
 
 func (w *GameWatcher) GetLogs() (io.ReadCloser, error) {
-	pods, err := w.getClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+	pods, err := w.getClient().CoreV1().Pods(w.Namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=" + w.DeploymentName,
 	})
 	if err != nil || len(pods.Items) == 0 {
-		return nil, errors.New("Pod is missing")
+		return nil, errors.New("pod is missing")
 	}
 	podName := pods.Items[0].Name
 
 	log.Printf("Streaming logs for pod %s", podName)
 
-	req := w.getClient().CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
+	req := w.getClient().CoreV1().Pods(w.Namespace).GetLogs(podName, &corev1.PodLogOptions{
 		Follow: true,
 	})
 	return req.Stream(context.TODO())
@@ -76,7 +73,7 @@ func (w *GameWatcher) Scale(replicas int32) error {
 	}
 
 	deployment.Spec.Replicas = &replicas
-	_, err = clientset.AppsV1().Deployments(namespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
+	_, err = w.getClient().AppsV1().Deployments(w.Namespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
 	return err
 }
 
@@ -87,7 +84,7 @@ func (gw *GameWatcher) RegisterHandlers(mux *http.ServeMux) {
 			http.Error(w, fmt.Sprintf("Failed to get deployment: %v", err), http.StatusInternalServerError)
 			return
 		}
-		json.NewEncoder(w).Encode(d)
+		json.NewEncoder(w).Encode(d.Status)
 	})
 	mux.HandleFunc("POST /api/gameserver", func(w http.ResponseWriter, r *http.Request) {
 		err := gw.Scale(1)

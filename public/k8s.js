@@ -1,10 +1,11 @@
-var gameServerStatus = "stopped";
+var replicas = 0;
 
 function updateGameServerStatus() {
   fetch("/api/gameserver")
     .then((response) => response.json())
     .then((data) => {
-      gameServerStatus = data.status;
+      console.log("Game server status:", data);
+      replicas = data.readyReplicas || 0;
       updateGameServerButton();
     })
     .catch((err) => console.error("Error fetching game server status:", err));
@@ -14,7 +15,7 @@ function updateGameServerButton() {
   const button = document.getElementById("gameServerBtn");
   if (!button) return;
   button.disabled = false;
-  if (gameServerStatus === "running") {
+  if (replicas > 0) {
     button.textContent = "Stop";
     button.onclick = stopGameServer;
     button.classList.remove("start");
@@ -29,23 +30,23 @@ function updateGameServerButton() {
 
 function startGameServer() {
   fetch("/api/gameserver", { method: "POST" })
-    .then((response) => response.json())
     .then((data) => {
-      console.log(data.message);
-      gameServerStatus = "running"; // Optimistic update
-      updateGameServerButton();
-      setTimeout(updateGameServerStatus, 5000); // Re-check after 5s
+      if (data.ok) {
+        replicas = 1;
+        updateGameServerButton();
+        setTimeout(updateGameServerStatus, 5000); // Re-check after 5s
+      }
     })
     .catch((err) => console.error("Error starting game server:", err));
 }
 
 function stopGameServer() {
   fetch("/api/gameserver", { method: "DELETE" })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log(data.message);
-      gameServerStatus = "stopped"; // Optimistic update
-      updateGameServerButton();
+    .then((response) => {
+      if (response.ok) {
+        replicas = 0;
+        updateGameServerButton();
+      }
     })
     .catch((err) => console.error("Error stopping game server:", err));
 }

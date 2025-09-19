@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sync"
 
 	"github.com/gorcon/rcon"
@@ -27,7 +26,6 @@ const maxHistorySize = 50
 var messageHistory []string
 
 var rconClient *rcon.Conn
-var gameType string
 var rconMutex = &sync.Mutex{}
 
 func getRconClient() (*rcon.Conn, error) {
@@ -53,16 +51,6 @@ func getRconClient() (*rcon.Conn, error) {
 	log.Println("Successfully connected to RCON server!")
 	rconClient = newRconClient
 	return rconClient, nil
-}
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	if fallback == "" {
-		log.Fatalf("Missing env %s", key)
-	}
-	return fallback
 }
 
 func main() {
@@ -91,7 +79,7 @@ func main() {
 	}
 
 	log.Printf("HTTP server starting on 1337")
-	err = http.ListenAndServe(":1337", nil)
+	err = http.ListenAndServe(":1337", mux)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
@@ -109,7 +97,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	mutex.Unlock()
 
 	// Send meta information
-	meta := map[string]string{"type": "meta", "game": gameType}
+	meta := map[string]string{"type": "meta", "game": CurrentConfig.RCon.Game}
 	metaJSON, _ := json.Marshal(meta)
 	ws.WriteMessage(websocket.TextMessage, metaJSON)
 	ws.WriteMessage(websocket.TextMessage, []byte("Welcome to the multiplayer rcon!"))
