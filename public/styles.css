@@ -502,3 +502,15 @@ footer a:hover {
 	font-family: monospace;
 	white-space: pre-wrap;
 }
+
+div.response.error {
+	background: #2a1414;
+	border-color: #5a1f1f;
+	color: #ffb4b4;
+}
+
+div.response.success {
+	background: #031a0d;
+	border-color: #1b4d32;
+	color: #ccc;
+}
