@@ -250,11 +250,12 @@
   // Quick command buttons
   doc.querySelectorAll("button[data-cmd]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const cmd = btn.dataset.cmd
+      btn.dataset.cmd
         .trim()
-        .split(/[\n\r\t]+/g)
-        .join(" ");
-      sendCommand(cmd);
+        .split(/[\n\r\t]+/g).split(";").filter(a => a).forEach(cmd => {    
+          sendCommand(cmd);
+        });
+        
     });
   });
 
