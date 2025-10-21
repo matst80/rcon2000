@@ -216,7 +216,9 @@
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    sendCommand(commandInput.value);
+    getCommandArray(commandInput.value).forEach((command) => {
+      sendCommand(command);
+    });
     commandInput.value = "";
   });
   commandInput.addEventListener("keydown", (e) => {
@@ -250,12 +252,9 @@
   // Quick command buttons
   doc.querySelectorAll("button[data-cmd]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      btn.dataset.cmd
-        .trim()
-        .split(/[\n\r\t]+/g).split(";").filter(a => a).forEach(cmd => {    
-          sendCommand(cmd);
-        });
-        
+      getCommandArray(btn.dataset.cmd).forEach((cmd) => {
+        sendCommand(cmd);
+      });
     });
   });
 
@@ -268,3 +267,13 @@
   });
   w._rconUI = { addMessage, sendCommand, applyGame };
 })(document, window);
+
+function getCommandArray(commandString) {
+  return commandString
+    .replace("\t", " ") // Replace tabs with spaces
+    .replace(/\s+/g, " ") // Remove multiple spaces
+    .replace(/\n+/g, ";") // Replace newlines with semicolons
+    .split(";") // Array from split by semicolon
+    .map((cmd) => cmd.trim()) // Remove leading/trailing spaces
+    .filter(Boolean); // Remove empty strings
+}
